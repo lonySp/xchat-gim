@@ -21,7 +21,7 @@ func (*defaultBuilder) Build() Configuration {
 
 	return Configuration{
 		MySQL:                "xchat:6TsXay5!h.pMnm3@tcp(database-1.chw4qwku6qx0.eu-north-1.rds.amazonaws.com:3306)/xchat?charset=utf8&parseTime=true",
-		RedisHost:            "127.0.0.1:6379",
+		RedisHost:            "xchat-y60xry.serverless.eun1.cache.amazonaws.com:6379",
 		RedisPassword:        "",
 		PushRoomSubscribeNum: 100,
 		PushAllSubscribeNum:  100,
