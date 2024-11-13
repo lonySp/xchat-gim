@@ -26,12 +26,12 @@ sleep 2
 nohup ./connect &
 echo "启动connect服务"
 
-cd ../file
-rm -f file
-go build -o file main.go
-echo "打包file成功"
-pkill file
-echo "停止file服务"
-nohup ./file &
-echo "启动file服务"
+#cd ../file
+#rm -f file
+#go build -o file main.go
+#echo "打包file成功"
+#pkill file
+#echo "停止file服务"
+#nohup ./file &
+#echo "启动file服务"
 
