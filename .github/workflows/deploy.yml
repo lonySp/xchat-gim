@@ -1,0 +1,35 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - dev  # 仅在推送到 dev 分支时触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.XCHAT_AWS_EC2_SSH_KEY }}
+
+      - name: Deploy to EC2
+        env:
+          HOST: "ec2-user@ec2-13-61-35-52.eu-north-1.compute.amazonaws.com"  # 您的 EC2 实例公网地址
+        run: |
+          ssh -o StrictHostKeyChecking=no $HOST << 'EOF'
+            # 切换到应用目录
+            cd /home/ec2-user/xchat-gim/xchat-gim  # 替换为您的项目在 EC2 上的路径
+
+            # 拉取 dev 分支的最新代码
+            git pull origin dev
+
+            # 执行运行脚本
+            chmod +x run.sh  # 确保脚本有执行权限
+            ./run.sh
+          EOF
