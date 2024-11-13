@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	// 启动TCP长链接服务器
+	// 启动TCP长链接服务器 --
 	go func() {
 		connect.StartTCPServer(config.Config.ConnectTCPListenAddr)
 	}()
