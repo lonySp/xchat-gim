@@ -16,15 +16,15 @@ jobs:
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.XCHAT_AWS_EC2_SSH_KEY }}
+          ssh-private-key: ${{ secrets.XCHAT_AWS_EC2_SSH_KEY }}  # 确保与 GitHub Secrets 名称一致
 
       - name: Deploy to EC2
         env:
-          HOST: "ec2-user@ec2-13-61-35-52.eu-north-1.compute.amazonaws.com"  # 您的 EC2 实例公网地址
+          HOST: "ec2-user@ec2-13-61-35-52.eu-north-1.compute.amazonaws.com"  # EC2 实例的公网地址
         run: |
           ssh -o StrictHostKeyChecking=no $HOST << 'EOF'
             # 切换到应用目录
-            cd /home/ec2-user/xchat-gim/xchat-gim  # 替换为您的项目在 EC2 上的路径
+            cd /home/ec2-user/xchat-gim/xchat-gim  # 替换为 EC2 上的项目路径
 
             # 拉取 dev 分支的最新代码
             git pull origin dev
