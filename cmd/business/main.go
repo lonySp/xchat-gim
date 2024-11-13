@@ -19,7 +19,7 @@ import (
 func main() {
 	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor.NewInterceptor("business_interceptor", urlwhitelist.Business)))
 
-	// 监听服务关闭信号，服务平滑重启 --
+	// 监听服务关闭信号，服务平滑重启
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGTERM)
