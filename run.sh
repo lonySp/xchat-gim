@@ -6,7 +6,7 @@ go build -o business main.go
 echo "打包business成功"
 pkill business || echo "No business process found"
 echo "停止business服务"
-nohup ./business 2>&1 | tee ../../business.log &
+nohup ./business > ../../business.log 2>&1 &
 echo "启动business服务"
 
 cd ../logic
@@ -15,7 +15,7 @@ go build -o logic main.go
 echo "打包logic成功"
 pkill logic || echo "No logic process found"
 echo "停止logic服务"
-nohup ./logic 2>&1 | tee ../../logic.log &
+nohup ./logic > ../../logic.log 2>&1 &
 echo "启动logic服务"
 
 cd ../connect
@@ -24,8 +24,10 @@ go build -o connect main.go
 echo "打包connect成功"
 pkill connect || echo "No connect process found"
 echo "停止connect服务"
-nohup ./connect 2>&1 | tee ../../connect.log &
+nohup ./connect > ../../connect.log 2>&1 &
 echo "启动connect服务"
+
+echo "所有服务已启动！后台运行中。"
 
 
 #cd ../file
