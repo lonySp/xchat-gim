@@ -32,8 +32,14 @@ func (*userRepo) Get(userId int64) (*model.User, error) {
 	return user, err
 }
 
+// GetByPhoneNumber 通过手机号获取用户
 func (*userRepo) GetByPhoneNumber(phoneNumber string) (*model.User, error) {
 	return UserDao.GetByPhoneNumber(phoneNumber)
+}
+
+// GetByTwitterID 通过 TwitterID 获取用户
+func (*userRepo) GetByTwitterID(twitterID string) (*model.User, error) {
+	return UserDao.GetByTwitterID(twitterID)
 }
 
 // GetByIds 获取多个用户
