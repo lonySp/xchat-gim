@@ -10,14 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: 检出代码
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Step 2: 设置 SSH
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.XCHAT_AWS_EC2_SSH_KEY }}  # 确保与 GitHub Secrets 名称一致
 
+      # Step 3: 部署代码到 EC2
       - name: Deploy to EC2
         env:
           HOST: "ec2-user@ec2-13-61-35-52.eu-north-1.compute.amazonaws.com"  # EC2 实例的公网地址
@@ -27,7 +30,14 @@ jobs:
             cd /home/ec2-user/xchat-gim/xchat-gim  # 替换为 EC2 上的项目路径
 
             # 拉取 dev 分支的最新代码
+            git reset --hard
             git pull origin dev
+
+            # 停止旧服务
+            pkill -f "connect|business|logic" || echo "No running services to stop"
+
+            # 确保依赖已安装
+            go mod tidy
 
             # 执行运行脚本
             chmod +x run.sh  # 确保脚本有执行权限
