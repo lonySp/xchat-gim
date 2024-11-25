@@ -67,7 +67,7 @@ type k8sResolver struct {
 }
 
 func newK8sResolver(target resolver.Target, clientConn resolver.ClientConn) (*k8sResolver, error) {
-	log := logger.Logger.With(zap.String("target", target.Endpoint))
+	log := logger.Logger.With(zap.String("target", target.Endpoint()))
 	log.Info("k8s resolver build")
 	namespace, service, port, err := parseTarget(target)
 	if err != nil {
@@ -159,7 +159,7 @@ func (r *k8sResolver) updateState(isFromNew bool) error {
 
 // parseTarget 对grpc的Endpoint进行解析，格式必须是：k8s:///namespace.server:port
 func parseTarget(target resolver.Target) (namespace string, service string, port string, err error) {
-	namespaceAndServerPort := strings.Split(target.Endpoint, ".")
+	namespaceAndServerPort := strings.Split(target.Endpoint(), ".")
 	if len(namespaceAndServerPort) != 2 {
 		err = errors.New("endpoint must is namespace.server:port")
 		return

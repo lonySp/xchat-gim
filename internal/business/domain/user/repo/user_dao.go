@@ -80,3 +80,15 @@ func (*userDao) Search(key string) ([]model.User, error) {
 	}
 	return users, nil
 }
+
+func (d *userDao) GetByTwitterID(id string) (*model.User, error) {
+	var user model.User
+	err := db.DB.First(&user, "twitter_id = ?", id).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, gerrors.WrapError(err)
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &user, err
+}
