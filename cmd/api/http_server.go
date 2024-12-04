@@ -11,30 +11,28 @@ import (
 	"google.golang.org/grpc"
 )
 
-// 配置
 const (
 	grpcAddress = "localhost:8020" // gRPC 服务地址
 	httpAddress = ":8080"          // HTTP 服务地址
 )
 
-// TwitterSignInHandler 处理 TwitterSignIn 的 HTTP 请求
+// TwitterSignInHandler 处理 Twitter 回调请求
 func TwitterSignInHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+	if r.Method != http.MethodGet { // 回调使用 GET 方法
+		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// 解析 HTTP 请求体
-	var req struct {
-		AuthorizationCode string `json:"authorization_code"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if req.AuthorizationCode == "" {
+	// 从查询参数中提取 authorization_code 和 state
+	authorizationCode := r.URL.Query().Get("code")
+	if authorizationCode == "" {
 		http.Error(w, "Authorization code is required", http.StatusBadRequest)
+		return
+	}
+
+	state := r.URL.Query().Get("state")
+	if state == "" {
+		http.Error(w, "State is required", http.StatusBadRequest)
 		return
 	}
 
@@ -51,7 +49,8 @@ func TwitterSignInHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 调用 gRPC 方法
 	grpcResp, err := client.TwitterSignIn(context.Background(), &pb.TwitterSignInReq{
-		AuthorizationCode: req.AuthorizationCode,
+		AuthorizationCode: authorizationCode,
+		State:             state, // 包含 state 参数
 	})
 	if err != nil {
 		http.Error(w, "Failed to call gRPC service: "+err.Error(), http.StatusInternalServerError)

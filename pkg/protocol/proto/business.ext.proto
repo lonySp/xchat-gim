@@ -72,6 +72,7 @@ message TwitterAuthorizeURLResp {
 // 推特登录请求
 message TwitterSignInReq {
   string authorization_code = 1; // 前端获取的授权码
+  string state = 2;
 }
 
 // 推特登录响应
