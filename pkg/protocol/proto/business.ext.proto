@@ -14,6 +14,8 @@ service BusinessExt {
   // 搜索用户(这里简单数据库实现，生产环境建议使用ES)
   rpc SearchUser (SearchUserReq) returns (SearchUserResp);
 
+  // 获取推特授权 URL
+  rpc GetTwitterAuthorizeURL (google.protobuf.Empty) returns (TwitterAuthorizeURLResp);
   // 推特登录
   rpc TwitterSignIn (TwitterSignInReq) returns (TwitterSignInResp);
 }
@@ -62,9 +64,15 @@ message SearchUserResp {
   repeated User users = 1;
 }
 
+// 获取 Twitter 授权 URL 响应
+message TwitterAuthorizeURLResp {
+  string url = 1; // 授权 URL
+}
+
 // 推特登录请求
 message TwitterSignInReq {
   string authorization_code = 1; // 前端获取的授权码
+  string state = 2;
 }
 
 // 推特登录响应
