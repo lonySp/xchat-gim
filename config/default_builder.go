@@ -21,7 +21,7 @@ func (*defaultBuilder) Build() Configuration {
 
 	return Configuration{
 		MySQL:                "xchat:6TsXay5!h.pMnm3@tcp(database-1.chw4qwku6qx0.eu-north-1.rds.amazonaws.com:3306)/xchat?charset=utf8&parseTime=true",
-		RedisHost:            "xchat-y60xry.serverless.eun1.cache.amazonaws.com:6379",
+		RedisHost:            "127.0.0.1:6379",
 		RedisPassword:        "",
 		PushRoomSubscribeNum: 100,
 		PushAllSubscribeNum:  100,
@@ -44,7 +44,7 @@ func (*defaultBuilder) Build() Configuration {
 			return pb.NewConnectIntClient(conn)
 		},
 		LogicIntClientBuilder: func() pb.LogicIntClient {
-			conn, err := grpc.DialContext(context.TODO(), "addrs:///docker.for.mac.host.internal:8010", grpc.WithInsecure(), grpc.WithUnaryInterceptor(interceptor),
+			conn, err := grpc.DialContext(context.TODO(), "addrs:///127.0.0.1:8010", grpc.WithInsecure(), grpc.WithUnaryInterceptor(interceptor),
 				grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)))
 			if err != nil {
 				panic(err)
