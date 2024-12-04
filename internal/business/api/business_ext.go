@@ -3,15 +3,14 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	app2 "gim/internal/business/domain/user/app"
 	"gim/pkg/grpclib"
 	"gim/pkg/protocol/pb"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"math/rand"
 	"net/http"
 	"net/url"
-
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type BusinessExtServer struct {
@@ -19,11 +18,12 @@ type BusinessExtServer struct {
 }
 
 const (
-	twitterTokenURL    = "https://api.twitter.com/2/oauth2/token"
-	twitterUserInfoURL = "https://api.twitter.com/2/users/me"
-	clientID           = "K9z0ypANOnn9rAAROJpmMR7tu"                          // 替换为实际的 Client ID
-	clientSecret       = "8iEx3w5wT4LH2rlUPr28PQNKMDuZECuiT2YuVE6Wv18tEWwSZp" // 替换为实际的 Client Secret
-	redirectURI        = "http://im8iwz.natappfree.cc/user/twitter_callback"
+	twitterAuthorizeURL = "https://twitter.com/i/oauth2/authorize"
+	twitterTokenURL     = "https://api.twitter.com/2/oauth2/token"
+	twitterUserInfoURL  = "https://api.twitter.com/2/users/me"
+	clientID            = "K9z0ypANOnn9rAAROJpmMR7tu"                          // 替换为实际的 Client ID
+	clientSecret        = "8iEx3w5wT4LH2rlUPr28PQNKMDuZECuiT2YuVE6Wv18tEWwSZp" // 替换为实际的 Client Secret
+	redirectURI         = "http://im8iwz.natappfree.cc/user/twitter_callback"
 )
 
 func (s *BusinessExtServer) SignIn(ctx context.Context, req *pb.SignInReq) (*pb.SignInResp, error) {
@@ -62,38 +62,58 @@ func (s *BusinessExtServer) SearchUser(ctx context.Context, req *pb.SearchUserRe
 	return &pb.SearchUserResp{Users: users}, err
 }
 
+// GetTwitterAuthorizeURL 获取 Twitter 授权 URL
+func (s *BusinessExtServer) GetTwitterAuthorizeURL(ctx context.Context, req *emptypb.Empty) (*pb.TwitterAuthorizeURLResp, error) {
+	state := generateRandomState()
+	// 存储 state 到 Redis，设置过期时间 5 分钟
+	//err := saveStateToRedis(state)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to save state: %w", err)
+	//}
+
+	url := fmt.Sprintf("%s?response_type=code&client_id=%s&redirect_uri=%s&scope=tweet.read users.read&state=%s",
+		twitterAuthorizeURL, clientID, url.QueryEscape(redirectURI), state)
+
+	return &pb.TwitterAuthorizeURLResp{Url: url}, nil
+}
+
 // TwitterSignIn 实现推特登录
 func (s *BusinessExtServer) TwitterSignIn(ctx context.Context, req *pb.TwitterSignInReq) (*pb.TwitterSignInResp, error) {
-	// Step 1: 用授权码换取 Access Token
+	// Step 1: 校验输入
+	if req.AuthorizationCode == "" {
+		return nil, fmt.Errorf("authorization code is required")
+	}
+
+	// Step 2: 用授权码换取 Access Token
 	accessToken, err := exchangeCodeForToken(req.AuthorizationCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get access token: %w", err)
 	}
 
-	// Step 2: 获取 Twitter 用户信息
+	// Step 3: 获取 Twitter 用户信息
 	twitterUser, err := getTwitterUserInfo(accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Twitter user info: %w", err)
 	}
 
-	// Step 3: 检查用户是否存在或创建用户
+	// Step 4: 检查用户是否存在或创建用户
 	isNew, userId, token, err := app2.AuthApp.TwitterSignIn(ctx, twitterUser.ID, twitterUser.Name, twitterUser.Username, twitterUser.Avatar)
 	if err != nil {
-		return nil, err
-	}
-
-	// Step 4: 获取用户详细信息
-	user, err := app2.UserApp.Get(ctx, userId)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign in user: %w", err)
 	}
 
 	// 返回响应
 	return &pb.TwitterSignInResp{
-		IsNew:    isNew,
-		UserId:   userId,
-		Token:    token,
-		UserInfo: user,
+		IsNew:  isNew,
+		UserId: userId,
+		Token:  token,
+		UserInfo: &pb.User{
+			UserId:          userId,
+			Nickname:        twitterUser.Name,
+			AvatarUrl:       twitterUser.Avatar,
+			TwitterId:       twitterUser.ID,
+			TwitterUsername: twitterUser.Username,
+		},
 	}, nil
 }
 
@@ -108,15 +128,19 @@ func exchangeCodeForToken(code string) (string, error) {
 
 	resp, err := http.PostForm(twitterTokenURL, data)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to get access token: status %d", resp.StatusCode)
+	}
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return "", err
+		return "", fmt.Errorf("JSON decode failed: %w", err)
 	}
 	return tokenResp.AccessToken, nil
 }
@@ -128,18 +152,21 @@ func getTwitterUserInfo(accessToken string) (*struct {
 	Username string `json:"username"`
 	Avatar   string `json:"profile_image_url"`
 }, error) {
-	req, _ := http.NewRequest("GET", twitterUserInfoURL, nil)
+	req, err := http.NewRequest("GET", twitterUserInfoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to get user info")
+		return nil, fmt.Errorf("failed to get user info: status %d", resp.StatusCode)
 	}
 
 	var userInfo struct {
@@ -149,8 +176,18 @@ func getTwitterUserInfo(accessToken string) (*struct {
 		Avatar   string `json:"profile_image_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("JSON decode failed: %w", err)
 	}
 
 	return &userInfo, nil
+}
+
+// 生成随机 state，用于防止 CSRF 攻击
+func generateRandomState() string {
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	state := make([]rune, 16)
+	for i := range state {
+		state[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(state)
 }
